@@ -52,11 +52,11 @@
 <body class="bg-slate-100 min-h-screen text-slate-800 p-6 md:p-12">
 
     <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8 text-center text-slate-700">La mia Collezione di Link</h1>
+        <h1 class="text-3xl font-bold mb-8 text-center text-slate-700">Pollo Resources</h1>
 
         <!-- Controlli: Cerca e Filtra -->
         <div class="flex flex-col md:flex-row gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm">
-            <input type="text" id="searchInput" placeholder="Cerca un sito..." class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <input type="text" id="searchInput" placeholder="Search :)" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             <select id="sortSelect" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                 <option value="random">Casual (Default)</option>
                 <option value="nameAsc">Name (A-Z)</option>
@@ -74,7 +74,7 @@
     <!-- Div nascosto che mostrerà l'anteprima -->
     <div id="preview-box">
         <div class="loader" id="preview-loader"></div>
-        <img id="preview-image" src="" alt="Anteprima">
+        <img id="preview-image" src="" alt="preview">
     </div>
 
     <script>
@@ -104,7 +104,7 @@
                 // Mette la prima lettera maiuscola e restituisce il nome
                 return domain.charAt(0).toUpperCase() + domain.slice(1);
             } catch (e) {
-                return "Sito Web"; // Se l'URL è scritto male, mostra questo
+                return "Website"; // Se l'URL è scritto male, mostra questo
             }
         }
 
