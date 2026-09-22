@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>La mia libreria di Link</title>
+    
+    <!-- Libreria per leggere il file CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <!-- Framework CSS per uno stile moderno e responsive -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        /* Stili per il tooltip dell'anteprima */
+        #previewTooltip {
+            /* Impedisce che il cursore interagisca col tooltip causando sfarfallii */
+            pointer-events: none; 
+            /* Transizione fluida per l'apparizione/scomparsa */
+            transition: opacity 0.2s ease-in-out;
+            /* Placeholder di caricamento animato in background */
+            background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+            background-size: 400% 100%;
+            animation: loadingSkeleton 1.5s infinite;
+        }
+
+        @keyframes loadingSkeleton {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+
+        /* Testo "Caricamento in corso..." posizionato dietro l'immagine */
+        .tooltip-loading-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #6b7280;
+            font-size: 0.875rem;
+            z-index: 0;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* L'immagine sta sopra il testo di caricamento */
+        #previewImage {
+            position: relative;
+            z-index: 1;
+            /* Nascondiamo l'immagine finché non è carica se non c'è src, gestito via JS */
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans min-h-screen p-4 sm:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Header -->
+        <div class="bg-blue-600 p-6 sm:p-10 text-white text-center">
+            <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight">I Miei Link</h1>
+            <p class="mt-2 text-blue-100">La tua libreria personale con anteprima in tempo reale</p>
+        </div>
+
+        <div class="p-6 sm:p-10">
+            <!-- Controlli (Ricerca e Ordinamento) -->
+            <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                <div class="relative flex-1">
+                    <input type="text" id="searchInput" placeholder="Cerca per nome..." 
+                           class="w-full pl-4 pr-10 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm">
+                </div>
+                <select id="sortSelect" 
+                        class="w-full sm:w-64 px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm bg-white cursor-pointer">
+                    <option value="random">Ordine Casuale</option>
+                    <option value="nameAsc">Nome (A-Z)</option>
+                    <option value="dateDesc">Più recenti</option>
+                    <option value="dateAsc">Meno recenti</option>
+                </select>
+            </div>
+
+            <!-- Lista dei Link -->
+            <ul id="linkList" class="space-y-4">
+                <li class="text-center py-10 text-gray-500 animate-pulse">Caricamento link in corso...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Tooltip per l'anteprima (Inizialmente invisibile) -->
+    <div id="previewTooltip" class="fixed opacity-0 w-[400px] aspect-[4/3] rounded-lg shadow-2xl overflow-hidden z-50 transform border border-gray-200">
+        <div class="tooltip-loading-text flex flex-col items-center gap-2">
+            <svg class="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Caricamento anteprima...
+        </div>
+        <img id="previewImage" src="" alt="Anteprima sito" class="w-full h-full object-cover opacity-0 transition-opacity duration-300">
+    </div>
+
+    <script>
+        // === INSERISCI QUI IL LINK DEL TUO CSV GOOGLE SHEETS ===
+        // Per provare, questo è un CSV di esempio fittizio che funziona
+        const fallbackDemoCsv = "Nome,URL,DataAggiunta\nGoogle,https://google.com,2023-10-01\nWikipedia,https://wikipedia.org,2023-10-02\nGitHub,https://github.com,2023-10-03\nApple,https://apple.com,2023-10-04";
+        const sheetUrl = 'INSERISCI_QUI_IL_LINK_CSV'; 
+        
+        let allLinks = [];
+        const tooltip = document.getElementById('previewTooltip');
+        const tooltipImg = document.getElementById('previewImage');
+
+        // Gestisce l'apparizione e lo spostamento dell'anteprima
+        const handleMouseEnter = (e, url) => {
+            // URL dell'API di WordPress per le anteprime (mshots)
+            const mshotsUrl = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=400`;
+            
+            // Resettiamo l'immagine mentre carica la nuova
+            tooltipImg.classList.remove('opacity-100');
+            tooltipImg.classList.add('opacity-0');
+            tooltipImg.src = mshotsUrl;
+
+            // Quando l'immagine ha finito di caricare, la mostriamo
+            tooltipImg.onload = () => {
+                tooltipImg.classList.remove('opacity-0');
+                tooltipImg.classList.add('opacity-100');
+            };
+
+            // Mostriamo il tooltip contenitore
+            tooltip.classList.remove('opacity-0');
+            tooltip.classList.add('opacity-100');
+            
+            updateTooltipPosition(e);
+        };
+
+        const handleMouseMove = (e) => {
+            updateTooltipPosition(e);
+        };
+
+        const handleMouseLeave = () => {
+            // Nascondiamo il tooltip
+            tooltip.classList.remove('opacity-100');
+            tooltip.classList.add('opacity-0');
+            
+            // Ritardo leggero prima di svuotare la source per evitare scatti grafici
+            setTimeout(() => {
+                if (tooltip.classList.contains('opacity-0')) {
+                    tooltipImg.src = '';
+                }
+            }, 200);
+        };
+
+        const updateTooltipPosition = (e) => {
+            // Dimensioni fisse del tooltip (definite nel CSS)
+            const tooltipWidth = 400;
+            const tooltipHeight = 300; // aspect ratio 4/3
+
+            // Posizione cursore
+            let x = e.clientX + 15; // Leggermente spostato a destra del cursore
+            let y = e.clientY + 15; // Leggermente in basso rispetto al cursore
+
+            // Prevenire che il tooltip esca dai bordi dello schermo a destra
+            if (x + tooltipWidth > window.innerWidth) {
+                x = e.clientX - tooltipWidth - 15;
+            }
+
+            // Prevenire che il tooltip esca dai bordi inferiori
+            if (y + tooltipHeight > window.innerHeight) {
+                y = e.clientY - tooltipHeight - 15;
+            }
+
+            tooltip.style.left = `${x}px`;
+            tooltip.style.top = `${y}px`;
+        };
+
+        // Inizializza PapaParse
+        const loadData = () => {
+            // Se l'utente non ha ancora inserito il suo link, mostriamo un demo
+            if (sheetUrl === 'INSERISCI_QUI_IL_LINK_CSV') {
+                parseData(fallbackDemoCsv);
+            } else {
+                Papa.parse(sheetUrl, {
+                    download: true,
+                    header: true,
+                    complete: function(results) {
+                        // Filtriamo righe vuote
+                        const validData = results.data.filter(row => row.Nome && row.URL);
+                        allLinks = shuffleArray(validData);
+                        renderLinks(allLinks);
+                    },
+                    error: function(err) {
+                        document.getElementById('linkList').innerHTML = `<li class="text-red-500 font-bold p-4 bg-red-50 rounded-lg text-center">Errore nel caricamento del file CSV. Assicurati che il link sia corretto e pubblico.</li>`;
+                    }
+                });
+            }
+        };
+
+        const parseData = (csvString) => {
+             Papa.parse(csvString, {
+                header: true,
+                complete: function(results) {
+                    const validData = results.data.filter(row => row.Nome && row.URL);
+                    allLinks = shuffleArray(validData);
+                    renderLinks(allLinks);
+                }
+            });
+        }
+
+        function renderLinks(links) {
+            const list = document.getElementById('linkList');
+            list.innerHTML = ''; 
+
+            if(links.length === 0) {
+                list.innerHTML = '<li class="text-center p-8 bg-gray-50 rounded-xl text-gray-500 border-2 border-dashed border-gray-200">Nessun link trovato per la tua ricerca.</li>';
+                return;
+            }
+
+            links.forEach(link => {
+                const li = document.createElement('li');
+                li.className = 'group flex justify-between items-center p-4 sm:p-5 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200';
+                
+                // Formattazione data (se presente)
+                let dateString = '';
+                if(link.DataAggiunta) {
+                    const dateObj = new Date(link.DataAggiunta);
+                    if(!isNaN(dateObj)) {
+                        dateString = dateObj.toLocaleDateString('it-IT');
+                    }
+                }
+
+                // Generiamo il contenuto del singolo link
+                li.innerHTML = `
+                    <a href="${link.URL}" target="_blank" class="flex-1 text-lg sm:text-xl font-semibold text-gray-800 group-hover:text-blue-600 transition-colors flex items-center gap-2">
+                        <!-- Icona Link -->
+                        <svg class="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                        ${link.Nome}
+                    </a>
+                    <span class="text-sm font-medium text-gray-400 bg-gray-50 px-3 py-1 rounded-full whitespace-nowrap">${dateString}</span>
+                `;
+
+                // Aggiungiamo gli eventi mouse per mostrare l'anteprima solo se su Desktop (schermi > 768px)
+                li.addEventListener('mouseenter', (e) => {
+                    if (window.innerWidth >= 768) handleMouseEnter(e, link.URL);
+                });
+                li.addEventListener('mousemove', (e) => {
+                    if (window.innerWidth >= 768) handleMouseMove(e);
+                });
+                li.addEventListener('mouseleave', () => {
+                    if (window.innerWidth >= 768) handleMouseLeave();
+                });
+
+                list.appendChild(li);
+            });
+        }
+
+        // Funzione per mescolare (Random)
+        function shuffleArray(array) {
+            let shuffled = [...array];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function applyFilters() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const sortMode = document.getElementById('sortSelect').value;
+
+            // 1. Filtro Nome
+            let filtered = allLinks.filter(link => link.Nome.toLowerCase().includes(searchText));
+
+            // 2. Ordinamento
+            if (sortMode === 'nameAsc') {
+                filtered.sort((a, b) => a.Nome.localeCompare(b.Nome));
+            } else if (sortMode === 'dateDesc') {
+                // Se la data manca, li mettiamo in fondo
+                filtered.sort((a, b) => (new Date(b.DataAggiunta || 0)) - (new Date(a.DataAggiunta || 0)));
+            } else if (sortMode === 'dateAsc') {
+                filtered.sort((a, b) => (new Date(a.DataAggiunta || '9999-12-31')) - (new Date(b.DataAggiunta || '9999-12-31')));
+            } else if (sortMode === 'random') {
+                filtered = shuffleArray(filtered);
+            }
+
+            renderLinks(filtered);
+        }
+
+        // Ascoltatori Eventi per Barra di ricerca e Select
+        document.getElementById('searchInput').addEventListener('input', applyFilters);
+        document.getElementById('sortSelect').addEventListener('change', applyFilters);
+
+        // Avviamo l'applicazione caricando i dati
+        loadData();
+
+    </script>
+</body>
+</html>
