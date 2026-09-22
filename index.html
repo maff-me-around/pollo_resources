@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>La mia libreria di Link</title>
+    <title>Pollo Resources</title>
     <!-- Tailwind CSS per il design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- PapaParse per leggere il CSV -->
@@ -58,16 +58,16 @@
         <div class="flex flex-col md:flex-row gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm">
             <input type="text" id="searchInput" placeholder="Cerca un sito..." class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
             <select id="sortSelect" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                <option value="random">Ordine Casuale (Default)</option>
-                <option value="nameAsc">Nome (A-Z)</option>
-                <option value="dateDesc">Più recenti (in fondo al foglio)</option>
-                <option value="dateAsc">Meno recenti (in cima al foglio)</option>
+                <option value="random">Casual (Default)</option>
+                <option value="nameAsc">Name (A-Z)</option>
+                <option value="dateDesc">New</option>
+                <option value="dateAsc">Old</option>
             </select>
         </div>
 
         <!-- Lista dei link -->
         <ul id="linkList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <li class="col-span-full text-center py-10 text-slate-500">Caricamento link in corso...</li>
+            <li class="col-span-full text-center py-10 text-slate-500">Loading...</li>
         </ul>
     </div>
 
