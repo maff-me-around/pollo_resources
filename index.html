@@ -3,121 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Link Nello Spazio 3D</title>
+    <title>Pollo Resources</title>
+    <!-- Tailwind CSS per il design moderno -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse per leggere il CSV -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
-        /* Sfondo e azzeramento scroll tradizionale */
-        body {
-            margin: 0;
-            overflow: hidden; /* Nasconde la barra di scorrimento laterale */
-            background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
-            color: white;
-            font-family: sans-serif;
-        }
-
-        /* Il "Viewport" 3D (la telecamera) */
-        #viewport {
-            perspective: 800px;
-            width: 100vw;
-            height: 100vh;
-            position: absolute;
-            top: 0; 
-            left: 0;
-            overflow: hidden;
-        }
-
-        /* L'Universo che contiene i link e che si muove quando scrolli */
-        #world {
-            transform-style: preserve-3d;
-            width: 100%; 
-            height: 100%;
-            position: absolute;
-            /* Questa transizione rende il volo nello spazio fluido */
-            transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        /* Lo stile dei singoli link 3D */
-        .link-3d {
-            position: absolute;
-            top: 50%; 
-            left: 50%;
-            transform-style: preserve-3d;
-            width: 250px;
-            margin-left: -125px; /* Centra l'elemento sulle sue coordinate */
-        }
-
-        /* Effetto vetro per le card fluttuanti */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
-            transition: background 0.3s, border-color 0.3s;
-        }
-        .glass-card:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-
-        /* Box Anteprima Immagine */
+        /* CSS aggiuntivo per l'effetto anteprima che segue il mouse */
         #preview-box {
             position: fixed;
-            pointer-events: none;
-            z-index: 1000;
+            pointer-events: none; /* Evita fastidiosi sfarfallii del mouse */
+            z-index: 50;
             display: none;
-            width: 320px;
-            height: 240px;
-            background: #000;
-            border-radius: 12px;
-            border: 2px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            width: 300px;
+            height: 225px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
             overflow: hidden;
-            transform: translate(20px, 20px);
+            transform: translate(15px, 15px); /* Sposta l'anteprima leggermente a destra in basso rispetto al cursore */
         }
         
         #preview-box img {
-            width: 100%; height: 100%; object-fit: cover; object-position: top;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: top;
         }
 
+        /* Effetto di caricamento (spinner) mentre carica lo screenshot */
         .loader {
-            border: 3px solid rgba(255,255,255,0.1);
-            border-top: 3px solid #fff;
-            border-radius: 50%; width: 30px; height: 30px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            position: absolute; top: 50%; left: 50%;
-            margin-top: -15px; margin-left: -15px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            margin-top: -15px;
+            margin-left: -15px;
         }
-        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
-<body>
+<body class="bg-slate-100 min-h-screen text-slate-800 p-6 md:p-12">
 
-    <!-- INTERFACCIA UTENTE (Fissa sopra il 3D) -->
-    <!-- pointer-events-none sul contenitore per permetterti di cliccare nello spazio dietro, e pointer-events-auto sui controlli per usarli -->
-    <div class="fixed top-0 left-0 w-full p-6 z-50 pointer-events-none flex flex-col md:flex-row justify-center gap-4">
-        <div class="pointer-events-auto flex flex-col md:flex-row gap-4 w-full max-w-3xl bg-slate-900/80 backdrop-blur-md p-4 rounded-2xl border border-slate-700 shadow-2xl">
-            <input type="text" id="searchInput" placeholder="Search..." class="flex-1 px-4 py-2 bg-slate-800 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-slate-400">
-            <select id="sortSelect" class="px-4 py-2 bg-slate-800 text-white border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="random">Ordine Casuale</option>
-                <option value="nameAsc">Nome (A-Z)</option>
-                <option value="dateDesc">Più recenti</option>
-                <option value="dateAsc">Meno recenti</option>
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold mb-8 text-center text-slate-700">Pollo Resources</h1>
+
+        <!-- Controlli: Cerca e Filtra -->
+        <div class="flex flex-col md:flex-row gap-4 mb-8 bg-white p-4 rounded-xl shadow-sm">
+            <input type="text" id="searchInput" placeholder="Search :)" class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <select id="sortSelect" class="px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                <option value="random">Casual (Default)</option>
+                <option value="nameAsc">Name (A-Z)</option>
+                <option value="dateDesc">New</option>
+                <option value="dateAsc">Old</option>
             </select>
         </div>
-    </div>
 
-    <!-- AMBIENTE 3D -->
-    <div id="viewport">
-        <div id="world">
-            <!-- I link verranno iniettati qui da JavaScript -->
-        </div>
+        <!-- Lista dei link -->
+        <ul id="linkList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <li class="col-span-full text-center py-10 text-slate-500">Loading...</li>
+        </ul>
     </div>
 
     <!-- Div nascosto che mostrerà l'anteprima -->
     <div id="preview-box">
         <div class="loader" id="preview-loader"></div>
-        <img id="preview-image" src="" alt="Anteprima">
+        <img id="preview-image" src="" alt="preview">
     </div>
 
     <script>
@@ -127,51 +84,43 @@
         const sheetUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTPQ_9hUR1qMz04BxjckK_RX2poudh93waYCFYsCBKnu6Q8QqWECpUxnxSwveS9JyTMuwq4qEy6Jzrj/pub?output=csv';
         
         let allLinks = [];
-        let cameraZ = 0; // Posizione della telecamera sull'asse Z
-        const world = document.getElementById('world');
 
-        // Navigazione 3D con la rotella del mouse
-        window.addEventListener('wheel', (e) => {
-            // Aumenta o diminuisci la posizione Z della telecamera
-            // Moltiplichiamo per 3 per rendere il volo più veloce
-            cameraZ += e.deltaY * 3; 
-            
-            // Impedisce di andare troppo indietro (oltre lo zero)
-            if (cameraZ < -500) cameraZ = -500; 
-            
-            // Muove l'universo verso di noi
-            world.style.transform = `translateZ(${cameraZ}px)`;
-        });
-
-        // Estrazione Nome da URL
+        // Funzione per estrarre il nome pulito dall'URL
         function estraiNomeDaURL(url) {
             try {
-                let domain = new URL(url).hostname; 
-                domain = domain.replace(/^www\./i, ''); 
+                let domain = new URL(url).hostname; // Prende solo il dominio (es. www.google.com)
+                domain = domain.replace(/^www\./i, ''); // Rimuove "www." se c'è
+                
                 let parts = domain.split('.'); 
+                
+                // Se è qualcosa tipo "amazon.co.uk", prende "amazon"
                 if (parts.length > 2 && (parts[parts.length - 2] === 'co' || parts[parts.length - 2] === 'gov')) {
                     domain = parts[parts.length - 3];
                 } else {
+                    // Altrimenti prende la parola prima dell'ultimo punto (es. "github" da "github.com")
                     domain = parts[parts.length - 2] || parts[0];
                 }
+
+                // Mette la prima lettera maiuscola e restituisce il nome
                 return domain.charAt(0).toUpperCase() + domain.slice(1);
             } catch (e) {
-                return "Sito Web"; 
+                return "Website"; // Se l'URL è scritto male, mostra questo
             }
         }
 
-        // Lettura CSV
+        // 1. Scarica e leggi il CSV
         Papa.parse(sheetUrl, {
             download: true,
             header: true,
             complete: function(results) {
+                // Filtriamo le righe vuote e creiamo dinamicamente il "Nome" e la "Data" (basata sull'indice di riga)
                 allLinks = results.data
                     .filter(row => row.URL && row.URL.trim() !== "") 
                     .map((row, index) => {
                         return {
-                            URL: row.URL.trim(), 
-                            Nome: estraiNomeDaURL(row.URL.trim()), 
-                            Indice: index 
+                            URL: row.URL.trim(),
+                            Nome: estraiNomeDaURL(row.URL.trim()),
+                            Indice: index // Usiamo l'ordine della riga come "Data di aggiunta"
                         };
                     });
                 
@@ -180,47 +129,36 @@
             }
         });
 
-        // Generazione del mondo 3D
+        // 2. Mostra i link nell'HTML
         function renderLinks(links) {
-            world.innerHTML = ''; 
-            
-            // Resetta la telecamera quando si filtra o si riordina
-            cameraZ = 0;
-            world.style.transform = `translateZ(0px)`;
+            const list = document.getElementById('linkList');
+            list.innerHTML = ''; 
 
-            links.forEach((link, i) => {
-                const el = document.createElement('div');
-                el.className = 'link-3d glass-card rounded-xl p-6 text-center';
+            if(links.length === 0) {
+                list.innerHTML = '<li class="col-span-full text-center py-10 text-slate-500">Nessun link trovato.</li>';
+                return;
+            }
+
+            links.forEach(link => {
+                const li = document.createElement('li');
+                li.className = "bg-white p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-slate-100 flex items-center justify-between";
                 
-                // CALCOLO COORDINATE 3D
-                // Dispersione orizzontale (X) e verticale (Y)
-                const rangeX = window.innerWidth * 1.5;
-                const rangeY = window.innerHeight * 1.5;
-                const x = (Math.random() - 0.5) * rangeX;
-                const y = (Math.random() - 0.5) * rangeY;
-                
-                // Profondità (Z). Più alto è l'indice, più lontano nello spazio si troverà.
-                // Moltiplicando "i" per 400px separiamo le card in profondità
-                const z = - (i * 400) - (Math.random() * 200); 
-
-                // Applica le coordinate 3D all'elemento
-                el.style.transform = `translate3D(${x}px, ${y}px, ${z}px)`;
-
+                // Generiamo il link all'immagine tramite mshots di WordPress
                 const encodedUrl = encodeURIComponent(link.URL);
                 const screenshotUrl = `https://s0.wordpress.com/mshots/v1/${encodedUrl}?w=600`;
 
-                el.innerHTML = `
-                    <a href="${link.URL}" target="_blank" class="preview-trigger block text-blue-400 font-bold text-2xl hover:text-blue-300 truncate" data-img="${screenshotUrl}">
+                li.innerHTML = `
+                    <a href="${link.URL}" target="_blank" class="preview-trigger text-emerald-600 font-semibold text-lg hover:underline truncate" data-img="${screenshotUrl}">
                         ${link.Nome}
                     </a>
                 `;
-                world.appendChild(el);
+                list.appendChild(li);
             });
 
             setupHoverEffects();
         }
 
-        // Utility per mischiare
+        // 3. Mescola l'array in modo random
         function shuffleArray(array) {
             let shuffled = [...array];
             for (let i = shuffled.length - 1; i > 0; i--) {
@@ -230,7 +168,7 @@
             return shuffled;
         }
 
-        // Filtri e ordinamento
+        // 4. Logica di filtraggio e ordinamento
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const sortMode = document.getElementById('sortSelect').value;
@@ -240,21 +178,22 @@
             if (sortMode === 'nameAsc') {
                 filtered.sort((a, b) => a.Nome.localeCompare(b.Nome));
             } else if (sortMode === 'dateDesc') {
+                // Più recenti = Indice più alto (in fondo al foglio excel)
                 filtered.sort((a, b) => b.Indice - a.Indice);
             } else if (sortMode === 'dateAsc') {
+                // Meno recenti = Indice più basso (in cima al foglio excel)
                 filtered.sort((a, b) => a.Indice - b.Indice);
             } else if (sortMode === 'random') {
                 filtered = shuffleArray(filtered);
             }
 
-            // Ricostruisce lo spazio con i nuovi criteri
             renderLinks(filtered);
         }
 
         document.getElementById('searchInput').addEventListener('input', applyFilters);
         document.getElementById('sortSelect').addEventListener('change', applyFilters);
 
-        // Gestione Anteprima (che continua a funzionare in 2D sopra lo spazio 3D)
+        // 5. Gestione dell'Anteprima con il Mouse
         function setupHoverEffects() {
             const previewBox = document.getElementById('preview-box');
             const previewImage = document.getElementById('preview-image');
@@ -263,12 +202,15 @@
 
             triggers.forEach(trigger => {
                 trigger.addEventListener('mouseenter', (e) => {
+                    // Prende l'url dell'immagine dal data-attribute
                     const imgUrl = trigger.getAttribute('data-img');
                     
+                    // Mostra la box e lo spinner
                     previewBox.style.display = 'block';
                     previewImage.style.display = 'none';
                     previewLoader.style.display = 'block';
                     
+                    // Carica l'immagine
                     previewImage.src = imgUrl;
                     previewImage.onload = () => {
                         previewLoader.style.display = 'none';
@@ -277,17 +219,24 @@
                 });
 
                 trigger.addEventListener('mousemove', (e) => {
-                    let posX = e.clientX + 20;
-                    let posY = e.clientY + 20;
+                    // Fa seguire la finestra al mouse
+                    // Controlla se esce fuori dallo schermo a destra
+                    let posX = e.clientX + 15;
+                    let posY = e.clientY + 15;
 
-                    if (posX + 320 > window.innerWidth) posX = e.clientX - 340; 
-                    if (posY + 240 > window.innerHeight) posY = e.clientY - 260; 
+                    if (posX + 300 > window.innerWidth) {
+                        posX = e.clientX - 315; // Sposta a sinistra del mouse
+                    }
+                    if (posY + 225 > window.innerHeight) {
+                        posY = e.clientY - 240; // Sposta sopra al mouse
+                    }
 
                     previewBox.style.left = posX + 'px';
                     previewBox.style.top = posY + 'px';
                 });
 
                 trigger.addEventListener('mouseleave', () => {
+                    // Nasconde l'anteprima
                     previewBox.style.display = 'none';
                     previewImage.src = ''; 
                 });
